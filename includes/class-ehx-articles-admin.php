@@ -146,7 +146,7 @@ class EHX_Articles_Admin
         // Clear cache and fetch fresh articles
         delete_transient('ehx_articles_cache');
         $articles = $this->force_fetch_articles();
-        
+
         // Store last fetch time
         update_option('ehx_articles_last_fetch', current_time('mysql'));
 
@@ -254,9 +254,20 @@ class EHX_Articles_Admin
         update_post_meta($post_id, '_ehx_article_id', $article_id);
         update_post_meta($post_id, '_ehx_category_name', sanitize_text_field($article['category']['categoryName'] ?? ''));
         update_post_meta($post_id, '_ehx_contributor_name', sanitize_text_field($article['contributor']['name'] ?? ''));
-        update_post_meta($post_id, '_ehx_contributor_designation', sanitize_text_field($article['contributor']['designation'] ?? ''));
-        update_post_meta($post_id, '_ehx_time_to_read', intval($article['timeToRead'] ?? 0));
+        $designation = sanitize_text_field($article['contributor']['designation'] ?? '');
+        $time_to_read = intval($article['timeToRead'] ?? 0);
+        update_post_meta($post_id, '_ehx_contributor_designation', $designation);
+        update_post_meta($post_id, '_ehx_time_to_read', $time_to_read);
         update_post_meta($post_id, '_ehx_cover_image_url', esc_url_raw($article['coverImageUrl'] ?? ''));
+
+        // Also save into normal custom fields so they appear in the default "Custom Fields" meta box
+        // These will use the simple keys: designation, timeToRead
+        if (!empty($designation)) {
+            update_post_meta($post_id, 'designation', $designation);
+        }
+        if (!empty($time_to_read)) {
+            update_post_meta($post_id, 'timeToRead', $time_to_read);
+        }
 
         // Set featured image if cover image exists
         if (!empty($article['coverImageUrl'])) {
@@ -520,7 +531,7 @@ class EHX_Articles_Admin
         if (!wp_next_scheduled('ehx_articles_daily_fetch')) {
             wp_schedule_event(time(), 'daily', 'ehx_articles_daily_fetch');
         }
-        
+
         // Schedule daily post creation at 3 AM (after articles are fetched)
         if (!wp_next_scheduled('ehx_articles_daily_create_posts')) {
             wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'ehx_articles_daily_create_posts');
@@ -535,15 +546,15 @@ class EHX_Articles_Admin
         // Clear cache and fetch fresh articles
         delete_transient('ehx_articles_cache');
         $articles = $this->force_fetch_articles();
-        
+
         // Store last fetch time
         update_option('ehx_articles_last_fetch', current_time('mysql'));
-        
+
         error_log(sprintf(
             'EHX Articles: Daily auto-fetch completed. Articles fetched: %d',
             count($articles)
         ));
-        
+
         // After fetching articles, automatically create/update posts
         // This ensures posts are created right after articles are fetched
         $this->daily_auto_create_posts();
@@ -555,10 +566,10 @@ class EHX_Articles_Admin
     public function daily_auto_create_posts()
     {
         $result = $this->sync_articles();
-        
+
         // Store last post creation time
         update_option('ehx_articles_last_post_creation', current_time('mysql'));
-        
+
         error_log(sprintf(
             'EHX Articles: Daily auto-post creation completed. Created: %d, Updated: %d, Errors: %d',
             $result['created'],
@@ -677,9 +688,19 @@ class EHX_Articles_Admin
         // Update article metadata
         update_post_meta($post_id, '_ehx_category_name', sanitize_text_field($article['category']['categoryName'] ?? ''));
         update_post_meta($post_id, '_ehx_contributor_name', sanitize_text_field($article['contributor']['name'] ?? ''));
-        update_post_meta($post_id, '_ehx_contributor_designation', sanitize_text_field($article['contributor']['designation'] ?? ''));
-        update_post_meta($post_id, '_ehx_time_to_read', intval($article['timeToRead'] ?? 0));
+        $designation = sanitize_text_field($article['contributor']['designation'] ?? '');
+        $time_to_read = intval($article['timeToRead'] ?? 0);
+        update_post_meta($post_id, '_ehx_contributor_designation', $designation);
+        update_post_meta($post_id, '_ehx_time_to_read', $time_to_read);
         update_post_meta($post_id, '_ehx_cover_image_url', esc_url_raw($article['coverImageUrl'] ?? ''));
+
+        // Also keep normal custom fields in sync
+        if (!empty($designation)) {
+            update_post_meta($post_id, 'designation', $designation);
+        }
+        if (!empty($time_to_read)) {
+            update_post_meta($post_id, 'timeToRead', $time_to_read);
+        }
 
         // Update featured image if cover image exists and is different
         if (!empty($article['coverImageUrl'])) {
@@ -786,9 +807,19 @@ class EHX_Articles_Admin
         update_post_meta($post_id, '_ehx_article_id', $article_id);
         update_post_meta($post_id, '_ehx_category_name', sanitize_text_field($article['category']['categoryName'] ?? ''));
         update_post_meta($post_id, '_ehx_contributor_name', sanitize_text_field($article['contributor']['name'] ?? ''));
-        update_post_meta($post_id, '_ehx_contributor_designation', sanitize_text_field($article['contributor']['designation'] ?? ''));
-        update_post_meta($post_id, '_ehx_time_to_read', intval($article['timeToRead'] ?? 0));
+        $designation = sanitize_text_field($article['contributor']['designation'] ?? '');
+        $time_to_read = intval($article['timeToRead'] ?? 0);
+        update_post_meta($post_id, '_ehx_contributor_designation', $designation);
+        update_post_meta($post_id, '_ehx_time_to_read', $time_to_read);
         update_post_meta($post_id, '_ehx_cover_image_url', esc_url_raw($article['coverImageUrl'] ?? ''));
+
+        // Also save into normal custom fields for visibility in the meta box
+        if (!empty($designation)) {
+            update_post_meta($post_id, 'designation', $designation);
+        }
+        if (!empty($time_to_read)) {
+            update_post_meta($post_id, 'timeToRead', $time_to_read);
+        }
 
         // Set featured image if cover image exists
         if (!empty($article['coverImageUrl'])) {
@@ -920,7 +951,7 @@ class EHX_Articles_Admin
         }
 
         $result = $this->sync_articles();
-        
+
         // Update last post creation time
         update_option('ehx_articles_last_post_creation', current_time('mysql'));
 
@@ -950,7 +981,7 @@ class EHX_Articles_Admin
         }
 
         $result = $this->sync_articles();
-        
+
         // Update last post creation time
         update_option('ehx_articles_last_post_creation', current_time('mysql'));
 
