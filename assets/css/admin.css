@@ -2,6 +2,31 @@
     margin: 20px 0;
 }
 
+.ehx-status-info {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.ehx-status-box {
+    flex: 1;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.ehx-status-box h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ehx-status-box p {
+    margin: 8px 0;
+    font-size: 13px;
+}
+
 .ehx-articles-header {
     display: flex;
     justify-content: space-between;
@@ -48,19 +73,34 @@
     margin-top: 20px;
 }
 
+#ehx-articles-table .column-profile-image {
+    width: 80px;
+    text-align: center;
+}
+
+#ehx-articles-table .column-name {
+    width: 12%;
+}
+
+#ehx-articles-table .column-designation {
+    width: 12%;
+}
+
 #ehx-articles-table .column-title {
-    width: 40%;
+    width: 25%;
 }
 
-#ehx-articles-table .column-category {
-    width: 15%;
-}
-
-#ehx-articles-table .column-contributor {
-    width: 20%;
+#ehx-articles-table .column-cover-image {
+    width: 100px;
+    text-align: center;
 }
 
 #ehx-articles-table .column-time {
+    width: 8%;
+    text-align: center;
+}
+
+#ehx-articles-table .column-category {
     width: 10%;
 }
 
@@ -138,4 +178,20 @@
 /* Hide rows that don't match search */
 .ehx-articles-table tr[style*="display: none"] {
     display: none !important;
+}
+
+.ehx-no-image,
+.ehx-no-data {
+    color: #999;
+    font-style: italic;
+}
+
+#ehx-articles-table img {
+    display: block;
+    margin: 0 auto;
+}
+
+#ehx-articles-table .column-profile-image img,
+#ehx-articles-table .column-cover-image img {
+    border: 1px solid #ddd;
 }

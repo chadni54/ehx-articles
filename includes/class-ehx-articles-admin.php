@@ -14,9 +14,13 @@ class EHX_Articles_Admin
         add_action('wp_ajax_ehx_fetch_articles', array($this, 'ajax_fetch_articles'));
         add_action('wp_ajax_ehx_bulk_create_posts', array($this, 'ajax_bulk_create_posts'));
         add_action('wp_ajax_ehx_sync_articles', array($this, 'ajax_sync_articles'));
+        add_action('wp_ajax_ehx_create_posts_manual', array($this, 'ajax_create_posts_manual'));
 
-        // Schedule daily auto article sync
-        add_action('ehx_articles_daily_auto_sync', array($this, 'daily_auto_sync_articles'));
+        // Schedule daily auto article fetch
+        add_action('ehx_articles_daily_fetch', array($this, 'daily_auto_fetch_articles'));
+
+        // Schedule daily auto post creation
+        add_action('ehx_articles_daily_create_posts', array($this, 'daily_auto_create_posts'));
 
         // Schedule cron on init if not already scheduled
         add_action('init', array($this, 'schedule_daily_cron'));
@@ -139,9 +143,12 @@ class EHX_Articles_Admin
             wp_send_json_error(array('message' => __('Unauthorized', 'ehx-articles')));
         }
 
-        // Clear cache
+        // Clear cache and fetch fresh articles
         delete_transient('ehx_articles_cache');
-        $articles = $this->fetch_articles();
+        $articles = $this->force_fetch_articles();
+        
+        // Store last fetch time
+        update_option('ehx_articles_last_fetch', current_time('mysql'));
 
         wp_send_json_success(array('articles' => $articles));
     }
@@ -505,25 +512,55 @@ class EHX_Articles_Admin
     }
 
     /**
-     * Schedule daily cron job
+     * Schedule daily cron jobs
      */
     public function schedule_daily_cron()
     {
-        if (!wp_next_scheduled('ehx_articles_daily_auto_sync')) {
-            // Schedule to run daily at 2 AM
-            wp_schedule_event(time(), 'daily', 'ehx_articles_daily_auto_sync');
+        // Schedule daily article fetch at 2 AM
+        if (!wp_next_scheduled('ehx_articles_daily_fetch')) {
+            wp_schedule_event(time(), 'daily', 'ehx_articles_daily_fetch');
+        }
+        
+        // Schedule daily post creation at 3 AM (after articles are fetched)
+        if (!wp_next_scheduled('ehx_articles_daily_create_posts')) {
+            wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'ehx_articles_daily_create_posts');
         }
     }
 
+    /**
+     * Daily auto fetch articles from API
+     */
+    public function daily_auto_fetch_articles()
+    {
+        // Clear cache and fetch fresh articles
+        delete_transient('ehx_articles_cache');
+        $articles = $this->force_fetch_articles();
+        
+        // Store last fetch time
+        update_option('ehx_articles_last_fetch', current_time('mysql'));
+        
+        error_log(sprintf(
+            'EHX Articles: Daily auto-fetch completed. Articles fetched: %d',
+            count($articles)
+        ));
+        
+        // After fetching articles, automatically create/update posts
+        // This ensures posts are created right after articles are fetched
+        $this->daily_auto_create_posts();
+    }
 
     /**
-     * Daily auto sync articles from API (update existing, create new)
+     * Daily auto create posts from articles
      */
-    public function daily_auto_sync_articles()
+    public function daily_auto_create_posts()
     {
         $result = $this->sync_articles();
+        
+        // Store last post creation time
+        update_option('ehx_articles_last_post_creation', current_time('mysql'));
+        
         error_log(sprintf(
-            'EHX Articles: Daily auto-sync completed. Created: %d, Updated: %d, Errors: %d',
+            'EHX Articles: Daily auto-post creation completed. Created: %d, Updated: %d, Errors: %d',
             $result['created'],
             $result['updated'],
             $result['errors']
@@ -883,6 +920,9 @@ class EHX_Articles_Admin
         }
 
         $result = $this->sync_articles();
+        
+        // Update last post creation time
+        update_option('ehx_articles_last_post_creation', current_time('mysql'));
 
         wp_send_json_success(array(
             'message' => sprintf(
@@ -896,5 +936,83 @@ class EHX_Articles_Admin
             'errors' => $result['errors'],
             'total' => $result['total']
         ));
+    }
+
+    /**
+     * AJAX handler to manually create posts from fetched articles
+     */
+    public function ajax_create_posts_manual()
+    {
+        check_ajax_referer('ehx_articles_nonce', 'nonce');
+
+        if (!current_user_can('publish_posts')) {
+            wp_send_json_error(array('message' => __('Unauthorized', 'ehx-articles')));
+        }
+
+        $result = $this->sync_articles();
+        
+        // Update last post creation time
+        update_option('ehx_articles_last_post_creation', current_time('mysql'));
+
+        wp_send_json_success(array(
+            'message' => sprintf(
+                __('Posts created/updated! Created: %d, Updated: %d, Errors: %d', 'ehx-articles'),
+                $result['created'],
+                $result['updated'],
+                $result['errors']
+            ),
+            'created' => $result['created'],
+            'updated' => $result['updated'],
+            'errors' => $result['errors'],
+            'total' => $result['total']
+        ));
+    }
+
+    /**
+     * Get next scheduled fetch time
+     */
+    public function get_next_fetch_time()
+    {
+        $timestamp = wp_next_scheduled('ehx_articles_daily_fetch');
+        if ($timestamp) {
+            return date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+        }
+        return __('Not scheduled', 'ehx-articles');
+    }
+
+    /**
+     * Get next scheduled post creation time
+     */
+    public function get_next_post_creation_time()
+    {
+        $timestamp = wp_next_scheduled('ehx_articles_daily_create_posts');
+        if ($timestamp) {
+            return date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+        }
+        return __('Not scheduled', 'ehx-articles');
+    }
+
+    /**
+     * Get last fetch time
+     */
+    public function get_last_fetch_time()
+    {
+        $time = get_option('ehx_articles_last_fetch');
+        if ($time) {
+            return date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($time));
+        }
+        return __('Never', 'ehx-articles');
+    }
+
+    /**
+     * Get last post creation time
+     */
+    public function get_last_post_creation_time()
+    {
+        $time = get_option('ehx_articles_last_post_creation');
+        if ($time) {
+            return date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($time));
+        }
+        return __('Never', 'ehx-articles');
     }
 }

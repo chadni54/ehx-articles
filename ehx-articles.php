@@ -54,22 +54,33 @@ register_activation_hook(__FILE__, 'ehx_articles_activate');
 register_deactivation_hook(__FILE__, 'ehx_articles_deactivate');
 
 /**
- * Activate plugin - schedule cron
+ * Activate plugin - schedule cron jobs
  */
 function ehx_articles_activate()
 {
-    if (!wp_next_scheduled('ehx_articles_daily_auto_sync')) {
-        wp_schedule_event(time(), 'daily', 'ehx_articles_daily_auto_sync');
+    // Schedule daily article fetch at 2 AM
+    if (!wp_next_scheduled('ehx_articles_daily_fetch')) {
+        wp_schedule_event(time(), 'daily', 'ehx_articles_daily_fetch');
+    }
+
+    // Schedule daily post creation at 3 AM (after articles are fetched)
+    if (!wp_next_scheduled('ehx_articles_daily_create_posts')) {
+        wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'ehx_articles_daily_create_posts');
     }
 }
 
 /**
- * Deactivate plugin - unschedule cron
+ * Deactivate plugin - unschedule cron jobs
  */
 function ehx_articles_deactivate()
 {
-    $timestamp = wp_next_scheduled('ehx_articles_daily_auto_sync');
+    $timestamp = wp_next_scheduled('ehx_articles_daily_fetch');
     if ($timestamp) {
-        wp_unschedule_event($timestamp, 'ehx_articles_daily_auto_sync');
+        wp_unschedule_event($timestamp, 'ehx_articles_daily_fetch');
+    }
+
+    $timestamp = wp_next_scheduled('ehx_articles_daily_create_posts');
+    if ($timestamp) {
+        wp_unschedule_event($timestamp, 'ehx_articles_daily_create_posts');
     }
 }

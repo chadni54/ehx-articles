@@ -66,10 +66,12 @@
                 var title = $row.data('title') || '';
                 var category = $row.data('category') || '';
                 var contributor = $row.data('contributor') || '';
+                var designation = $row.data('designation') || '';
 
                 if (title.indexOf(searchTerm) !== -1 || 
                     category.indexOf(searchTerm) !== -1 || 
-                    contributor.indexOf(searchTerm) !== -1) {
+                    contributor.indexOf(searchTerm) !== -1 ||
+                    designation.indexOf(searchTerm) !== -1) {
                     $row.show();
                 } else {
                     $row.hide();
@@ -77,14 +79,14 @@
             });
         });
 
-        // Sync articles (update existing, create new)
-        $('#ehx-sync-articles').on('click', function() {
+        // Create posts now (from fetched articles)
+        $('#ehx-create-posts-now').on('click', function() {
             var $btn = $(this);
-            if (!confirm('This will sync all articles from the API. Existing posts will be updated and new articles will be created. Continue?')) {
+            if (!confirm('This will create/update posts from all fetched articles. Existing posts will be updated and new articles will be created. Continue?')) {
                 return;
             }
 
-            $btn.prop('disabled', true).text(ehxArticles.strings.syncing);
+            $btn.prop('disabled', true).text('Creating posts...');
             $loading.show();
             $error.hide();
             $success.hide();
@@ -93,7 +95,7 @@
                 url: ehxArticles.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'ehx_sync_articles',
+                    action: 'ehx_create_posts_manual',
                     nonce: ehxArticles.nonce
                 },
                 success: function(response) {
@@ -106,7 +108,7 @@
                             location.reload();
                         }, 2000);
                     } else {
-                        $error.find('p').text(response.data.message || 'Error syncing articles');
+                        $error.find('p').text(response.data.message || 'Error creating posts');
                         $error.show();
                     }
                 },
@@ -115,7 +117,7 @@
                     $error.show();
                 },
                 complete: function() {
-                    $btn.prop('disabled', false).text('Sync Articles');
+                    $btn.prop('disabled', false).text('Create Posts Now');
                     $loading.hide();
                 }
             });
