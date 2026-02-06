@@ -1,0 +1,141 @@
+.ehx-articles-wrap {
+    margin: 20px 0;
+}
+
+.ehx-articles-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.ehx-header-left {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ehx-search-box {
+    flex: 1;
+    max-width: 300px;
+    margin-left: 15px;
+}
+
+.ehx-search-box input {
+    width: 100%;
+}
+
+.ehx-loading {
+    text-align: center;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    margin: 20px 0;
+}
+
+.ehx-loading p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+#ehx-articles-table {
+    margin-top: 20px;
+}
+
+#ehx-articles-table .column-title {
+    width: 40%;
+}
+
+#ehx-articles-table .column-category {
+    width: 15%;
+}
+
+#ehx-articles-table .column-contributor {
+    width: 20%;
+}
+
+#ehx-articles-table .column-time {
+    width: 10%;
+}
+
+#ehx-articles-table .column-actions {
+    width: 15%;
+}
+
+#ehx-articles-table img {
+    border-radius: 4px;
+}
+
+.ehx-post-exists {
+    color: #46b450;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.ehx-create-post {
+    position: relative;
+}
+
+.ehx-create-post.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.ehx-create-post.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    margin: auto;
+    border: 2px solid transparent;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.ehx-article-contributor {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 5px;
+}
+
+.ehx-article-contributor img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.ehx-article-contributor strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.ehx-article-contributor em {
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* Hide rows that don't match search */
+.ehx-articles-table tr[style*="display: none"] {
+    display: none !important;
+}
