@@ -307,28 +307,7 @@ class EHX_Articles_Admin
     {
         $content = $article['articleDescription'] ?? '';
 
-        // Add contributor information at the top
-        if (!empty($article['contributor'])) {
-            $contributor = $article['contributor'];
-            $contributor_html = '<div class="ehx-article-contributor" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">';
 
-            if (!empty($contributor['profileImageUrl'])) {
-                $contributor_html .= '<img src="' . esc_url($contributor['profileImageUrl']) . '" alt="' . esc_attr($contributor['name']) . '" style="width: 60px; height: 60px; border-radius: 50%; float: left; margin-right: 15px;">';
-            }
-
-            $contributor_html .= '<div>';
-            $contributor_html .= '<strong>' . esc_html($contributor['name']) . '</strong>';
-
-            if (!empty($contributor['designation'])) {
-                $contributor_html .= '<br><em>' . esc_html($contributor['designation']) . '</em>';
-            }
-
-            $contributor_html .= '</div>';
-            $contributor_html .= '<div style="clear: both;"></div>';
-            $contributor_html .= '</div>';
-
-            $content = $contributor_html . $content;
-        }
 
         // Add time to read at the bottom
         if (!empty($article['timeToRead'])) {

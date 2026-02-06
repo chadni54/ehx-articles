@@ -53,9 +53,9 @@ add_action('plugins_loaded', 'ehx_articles_init');
 register_activation_hook(__FILE__, 'ehx_articles_activate');
 register_deactivation_hook(__FILE__, 'ehx_articles_deactivate');
 
-/**
- * Activate plugin - schedule cron jobs
- */
+
+//  Activate plugin - schedule cron jobs
+
 function ehx_articles_activate()
 {
     // Schedule daily article fetch at 2 AM
