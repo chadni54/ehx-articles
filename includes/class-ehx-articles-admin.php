@@ -45,36 +45,46 @@ class EHX_Articles_Admin
      */
     public function enqueue_scripts($hook)
     {
-        if ($hook !== 'settings_page_ehx-articles') {
+        // Check if we're on the EHx Articles admin page
+        // Hook can be 'settings_page_ehx-articles' or 'options-general_page_ehx-articles'
+        if (strpos($hook, 'ehx-articles') === false) {
             return;
         }
 
-        wp_enqueue_style(
-            'ehx-articles-admin',
-            EHXArticles_URL . 'assets/css/admin.css',
-            array(),
-            EHXArticles_VERSION
-        );
+        // Verify the files exist before enqueuing
+        $css_path = EHXArticles_PATH . 'assets/css/admin.css';
+        $js_path = EHXArticles_PATH . 'assets/js/admin.js';
 
-        wp_enqueue_script(
-            'ehx-articles-admin',
-            EHXArticles_URL . 'assets/js/admin.js',
-            array('jquery'),
-            EHXArticles_VERSION,
-            true
-        );
+        if (file_exists($css_path)) {
+            wp_enqueue_style(
+                'ehx-articles-admin',
+                EHXArticles_URL . 'assets/css/admin.css',
+                array(),
+                EHXArticles_VERSION
+            );
+        }
 
-        wp_localize_script('ehx-articles-admin', 'ehxArticles', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('ehx_articles_nonce'),
-            'strings' => array(
-                'creating' => __('Creating post...', 'ehx-articles'),
-                'success' => __('Post created successfully!', 'ehx-articles'),
-                'error' => __('Error creating post.', 'ehx-articles'),
-                'fetching' => __('Fetching articles...', 'ehx-articles'),
-                'syncing' => __('Syncing articles...', 'ehx-articles'),
-            )
-        ));
+        if (file_exists($js_path)) {
+            wp_enqueue_script(
+                'ehx-articles-admin',
+                EHXArticles_URL . 'assets/js/admin.js',
+                array('jquery'),
+                EHXArticles_VERSION,
+                true
+            );
+
+            wp_localize_script('ehx-articles-admin', 'ehxArticles', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('ehx_articles_nonce'),
+                'strings' => array(
+                    'creating' => __('Creating post...', 'ehx-articles'),
+                    'success' => __('Post created successfully!', 'ehx-articles'),
+                    'error' => __('Error creating post.', 'ehx-articles'),
+                    'fetching' => __('Fetching articles...', 'ehx-articles'),
+                    'syncing' => __('Syncing articles...', 'ehx-articles'),
+                )
+            ));
+        }
     }
 
     /**
