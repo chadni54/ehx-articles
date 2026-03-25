@@ -3,18 +3,20 @@
 class EHX_Articles_Admin
 {
 
-    private $api_url = 'http://18.134.174.216:3000/api/v1/articles/public/articles';
+    private $api_url = 'https://api.askhanifah.com/api/v1/articles/public/articles';
     private $api_key = 'ext_articles_9f3bA72KxP1LmQe8RZcH4WJdM0YVNaS';
 
     public function __construct()
     {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('admin_post_ehx_articles_save_api_settings', array($this, 'save_api_settings'));
         add_action('wp_ajax_ehx_create_post_from_article', array($this, 'ajax_create_post_from_article'));
         add_action('wp_ajax_ehx_fetch_articles', array($this, 'ajax_fetch_articles'));
         add_action('wp_ajax_ehx_bulk_create_posts', array($this, 'ajax_bulk_create_posts'));
         add_action('wp_ajax_ehx_sync_articles', array($this, 'ajax_sync_articles'));
         add_action('wp_ajax_ehx_create_posts_manual', array($this, 'ajax_create_posts_manual'));
+        add_action('wp_ajax_ehx_delete_post', array($this, 'ajax_delete_post'));
 
         // Schedule daily auto article fetch
         add_action('ehx_articles_daily_fetch', array($this, 'daily_auto_fetch_articles'));
@@ -97,6 +99,126 @@ class EHX_Articles_Admin
     }
 
     /**
+     * Read API URL from wp_options (fallback to defaults).
+     * Used for admin form defaults too.
+     */
+    public function get_api_url()
+    {
+        $url = get_option('ehx_articles_api_url');
+        if (!empty($url)) {
+            return esc_url_raw($url);
+        }
+
+        return $this->api_url;
+    }
+
+    /**
+     * Read API Key from wp_options (fallback to defaults).
+     * Note: We intentionally never echo this key to the browser.
+     */
+    public function get_api_key()
+    {
+        $key = get_option('ehx_articles_api_key');
+        if (!empty($key)) {
+            return sanitize_text_field($key);
+        }
+
+        return $this->api_key;
+    }
+
+    /**
+     * Read selected CricAPI series ID from wp_options.
+     */
+    public function get_selected_series_id()
+    {
+        $series_id = get_option('ehx_articles_series_id');
+        if (!empty($series_id)) {
+            return sanitize_text_field($series_id);
+        }
+
+        return '';
+    }
+
+    /**
+     * Fetch all CricAPI series for admin select box.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function get_cricapi_series()
+    {
+        $api_key = $this->get_api_key();
+        if (empty($api_key)) {
+            return array();
+        }
+
+        $url = add_query_arg(
+            array(
+                'apikey' => $api_key,
+                'offset' => 0,
+            ),
+            'https://api.cricapi.com/v1/series'
+        );
+
+        $response = wp_remote_get(
+            $url,
+            array(
+                'timeout' => 30,
+            )
+        );
+
+        if (is_wp_error($response)) {
+            return array();
+        }
+
+        $code = (int) wp_remote_retrieve_response_code($response);
+        if (200 !== $code) {
+            return array();
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        if (!is_array($data) || !isset($data['data']) || !is_array($data['data'])) {
+            return array();
+        }
+
+        return $data['data'];
+    }
+
+    /**
+     * Save API settings from admin form.
+     */
+    public function save_api_settings()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized', 'ehx-articles'));
+        }
+
+        check_admin_referer('ehx_articles_save_api_settings', 'ehx_articles_api_nonce');
+
+        $api_url = isset($_POST['ehx_api_url']) ? esc_url_raw(wp_unslash($_POST['ehx_api_url'])) : '';
+        $api_key = isset($_POST['ehx_api_key']) ? sanitize_text_field(wp_unslash($_POST['ehx_api_key'])) : '';
+        $series_id = isset($_POST['ehx_series_id']) ? sanitize_text_field(wp_unslash($_POST['ehx_series_id'])) : '';
+
+        // Only update URL if user provided one.
+        if (!empty($api_url)) {
+            update_option('ehx_articles_api_url', $api_url);
+        }
+
+        // Keep existing key if input left blank.
+        if (!empty($api_key)) {
+            update_option('ehx_articles_api_key', $api_key);
+        }
+
+        update_option('ehx_articles_series_id', $series_id);
+
+        // New credentials may change the response; clear cache.
+        delete_transient('ehx_articles_cache');
+
+        wp_safe_redirect(admin_url('options-general.php?page=ehx-articles&ehx_api_saved=1'));
+        exit;
+    }
+
+    /**
      * Fetch articles from API
      */
     private function fetch_articles()
@@ -120,10 +242,17 @@ class EHX_Articles_Admin
      */
     private function force_fetch_articles()
     {
-        $response = wp_remote_get($this->api_url, array(
+        $api_url = $this->get_api_url();
+        $api_key = $this->get_api_key();
+
+        if (empty($api_url) || empty($api_key)) {
+            return array();
+        }
+
+        $response = wp_remote_get($api_url, array(
             'headers' => array(
-                'accept' => '/',
-                'x-api-key' => $this->api_key,
+                'accept' => '*/*',
+                'x-api-key' => $api_key,
             ),
             'timeout' => 30,
         ));
@@ -307,6 +436,55 @@ class EHX_Articles_Admin
             'post_id' => $post_id,
             'author_name' => $author_name,
             'edit_link' => get_edit_post_link($post_id, 'raw'),
+        ));
+    }
+
+    /**
+     * AJAX handler to delete a post created by this plugin.
+     */
+    public function ajax_delete_post()
+    {
+        check_ajax_referer('ehx_articles_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Unauthorized', 'ehx-articles')));
+        }
+
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+        if (!$post_id) {
+            wp_send_json_error(array('message' => __('Invalid post ID', 'ehx-articles')));
+        }
+
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== 'post') {
+            wp_send_json_error(array('message' => __('Post not found', 'ehx-articles')));
+        }
+
+        // Only allow deleting posts that are linked to the plugin's external articles.
+        $linked_article_id = get_post_meta($post_id, '_ehx_article_id', true);
+        if (empty($linked_article_id)) {
+            wp_send_json_error(array('message' => __('This post is not managed by EHx Articles', 'ehx-articles')));
+        }
+
+        $deleted = wp_delete_post($post_id, true);
+        if (is_wp_error($deleted)) {
+            $error_message = __('Failed to delete post', 'ehx-articles');
+            if (is_object($deleted) && method_exists($deleted, 'get_error_message')) {
+                $error_message = call_user_func(array($deleted, 'get_error_message'));
+            }
+            wp_send_json_error(array('message' => $error_message));
+        }
+
+        if (!$deleted) {
+            wp_send_json_error(array('message' => __('Failed to delete post', 'ehx-articles')));
+        }
+
+        // Clear cached API response after destructive action.
+        delete_transient('ehx_articles_cache');
+
+        wp_send_json_success(array(
+            'message' => __('Post deleted successfully.', 'ehx-articles'),
+            'post_id' => $post_id,
         ));
     }
 

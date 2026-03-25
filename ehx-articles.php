@@ -4,7 +4,7 @@
  * Plugin Name: EHx Articles
  * Plugin URI: https://wordpress.org/plugins/ehx-articles
  * Description: Fetch and manage articles from external API, create WordPress posts from articles.
- * Version: 1.0.0
+ * Version: 1.0.2
  * Requires at least: 5.8
  * Requires PHP: 7.4
  * Author: EH Studio

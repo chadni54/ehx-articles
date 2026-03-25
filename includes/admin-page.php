@@ -14,6 +14,86 @@ if (!defined('ABSPATH')) {
 
     <?php
     $admin = $GLOBALS['ehx_articles_admin'];
+    $series_options = $admin->get_cricapi_series();
+    $selected_series_id = $admin->get_selected_series_id();
+    ?>
+
+    <?php if (!empty($_GET['ehx_api_saved'])) : ?>
+        <div class="notice notice-success is-dismissible">
+            <p><?php _e('API settings saved.', 'ehx-articles'); ?></p>
+        </div>
+    <?php endif; ?>
+
+    <div class="ehx-api-settings" style="margin-top: 16px; background: #fff; padding: 20px; border: 1px solid #c9c9c9;">
+        <h2><?php _e('API Settings', 'ehx-articles'); ?></h2>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <input type="hidden" name="action" value="ehx_articles_save_api_settings">
+            <?php wp_nonce_field('ehx_articles_save_api_settings', 'ehx_articles_api_nonce'); ?>
+
+            <table class="form-table" role="presentation">
+                <tbody>
+                    <tr>
+                        <th scope="row">
+                            <label for="ehx_api_url"><?php _e('API URL', 'ehx-articles'); ?></label>
+                        </th>
+                        <td>
+                            <input style="width: 80%;"
+                                type="url"
+                                id="ehx_api_url"
+                                name="ehx_api_url"
+                                value="<?php echo esc_attr($admin->get_api_url()); ?>"
+                                class="regular-text"
+                                placeholder="https://example.com/api/v1/articles/public/articles"
+                                required />
+                            <p class="description"><?php _e('Enter your API endpoint URL.', 'ehx-articles'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="ehx_api_key"><?php _e('API Key', 'ehx-articles'); ?></label>
+                        </th>
+                        <td>
+                            <input style="width: 80%;"
+                                type="text"
+                                id="ehx_api_key"
+                                name="ehx_api_key"
+                                value="<?php echo esc_attr($admin->get_api_key()); ?>"
+                                class="regular-text"
+                                autocomplete="off"
+                                placeholder="<?php echo esc_attr__('Enter API key', 'ehx-articles'); ?>" />
+                            <p class="description"><?php _e('This key is visible to WordPress admin users. Keep it private.', 'ehx-articles'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="ehx_series_id"><?php _e('Choose Series', 'ehx-articles'); ?></label>
+                        </th>
+                        <td>
+                            <select id="ehx_series_id" name="ehx_series_id" style="width: 80%;">
+                                <option value=""><?php _e('-- Select Series --', 'ehx-articles'); ?></option>
+                                <?php foreach ($series_options as $series) :
+                                    $series_id = sanitize_text_field($series['id'] ?? '');
+                                    $series_name = sanitize_text_field($series['name'] ?? '');
+                                    if ('' === $series_id || '' === $series_name) {
+                                        continue;
+                                    }
+                                ?>
+                                    <option value="<?php echo esc_attr($series_id); ?>" <?php selected($selected_series_id, $series_id); ?>>
+                                        <?php echo esc_html($series_name . ' - ' . $series_id); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="description"><?php _e('Loaded from CricAPI /v1/series endpoint using API key.', 'ehx-articles'); ?></p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <?php submit_button(__('Save API Settings', 'ehx-articles')); ?>
+        </form>
+    </div>
+
+    <?php
     $next_fetch_time = $admin->get_next_fetch_time();
     $next_post_creation_time = $admin->get_next_post_creation_time();
     $last_fetch_time = $admin->get_last_fetch_time();

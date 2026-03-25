@@ -211,6 +211,52 @@
             }
         });
 
+        // Delete post (only when already exists)
+        $(document).on('click', '.ehx-delete-post', function() {
+            var $btn = $(this);
+            var postId = $btn.data('post-id');
+
+            if (!postId) {
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this post?')) {
+                return;
+            }
+
+            $btn.prop('disabled', true).text('Deleting...');
+            $error.hide();
+            $success.hide();
+            $loading.show();
+
+            $.ajax({
+                url: ehxArticles.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'ehx_delete_post',
+                    nonce: ehxArticles.nonce,
+                    post_id: postId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $success.find('p').text(response.data.message || 'Post deleted.').show();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        $error.find('p').text(response.data.message || 'Error deleting post').show();
+                    }
+                },
+                error: function() {
+                    $error.find('p').text('Network error. Please try again.').show();
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).text('Delete');
+                    $loading.hide();
+                }
+            });
+        });
+
         // Bulk create posts
         $bulkCreateBtn.on('click', function() {
             var $btn = $(this);
